@@ -1,1 +1,2 @@
-# BST209-2022
+## BST 209 Course Repository
+### Summer 1, 2022
