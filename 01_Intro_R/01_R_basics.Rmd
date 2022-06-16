@@ -1,0 +1,885 @@
+---
+title: 'Basic R'
+output: html_document
+---
+
+# Introduction to R
+
+In this course we will be using the
+[R software environment](https://cran.r-project.org/) for all our
+analysis. Throughout the course you will learn R and data analysis techniques simultaneously. However, we need to introduce basic R syntax to get you going. In this section, rather than cover every R skill you need, we introduce just enough so that you can follow along the remaining sections where we provide more in-depth coverage, building upon what you learn in this section. We find that we better retain R knowledge when we learn it to solve a specific problem.
+
+In this section, as done throughout the course, we will use a motivating case study. We ask a specific question related to crime in the United States and provide a relevant dataset. Some basic R skills will permit us to answer the motivating question. 
+
+
+## US gun murders
+
+Imagine you live in Europe and are offered a job at a US company with many locations across all states. It is a great job but news with headlines such as [**America is one of 6 countries that make up more than half of guns deaths worldwide**](https://www.vox.com/2018/8/29/17792776/us-gun-deaths-global) have you worried. Charts like this make you worry even more:
+
+![US gun homicides chart](http://abcnews.go.com/images/International/homocides_g8_countries_640x360_wmain.jpg)
+
+Or even worse, this version from [everytown.org](https://everytownresearch.org/gun-violence-america/):
+
+![US gun homicides second chart](https://everytownresearch.org/wp-content/uploads/2016/07/GunTrends_murders_per_1000.png)
+
+But then you are reminded that the US is a large and diverse country with 50 very different states as well as the District of Columbia (DC). 
+
+California, for example, has a larger population than Canada and 20 US states have populations larger than that of Norway. In some respects the variability across states in the US is akin to the variability across countries in Europe. Furthermore, although not in the charts above, the murder rates in Lithuania, Ukraine, and Russia are higher than 4 per 100,000. So perhaps the news reports that worried you are too superficial. You have options of where to live and want to find out how safe each state is. We will gain some insights by examining data related to gun homicides in the US using R. 
+
+Now before we get started with our example, we need to cover logistics as well as some of the very basic building blocks that we need to gain more advanced R skills. Be aware that for some of these, it is not immediately obvious how it is useful, but later in the book you will appreciate having the knowledge under your belt.
+
+
+## Data types
+
+Variables in R can be of different types. For example, we need to distinguish numbers from character strings and tables from simple lists of numbers. The function `class` helps us determine what type of object we have:
+
+```{r}
+a <- 2
+class(a)
+```
+
+```{r}
+b <- "hello"
+class(b)
+```
+
+
+To work efficiently in R it is important to learn the different types of variables and what we can do with these.
+
+### Data Frames
+
+Up to now, the variables we have defined are just one number. This is not very useful for storing data. The most common way of storing a dataset in R is in a _data frame_. Conceptually, we can think of a data frame as a table with rows representing observations and the different variables reported for each observatin defining the columns. Data frames are particularly useful for datasets because we can combine different data types into one object. 
+
+We stored the data for our motivating example in a data frame. You can access this dataset by loading the `dslabs` library and loading the `murders` dataset using the `data` function:
+
+```{r}
+library(dslabs)
+data(murders)
+head(murders)
+```
+
+To see that this is in fact a data frame we type
+
+```{r}
+class(murders)
+```
+
+### Examining an object
+
+The function `str` is useful to find out more about the structure of an object
+
+```{r}
+str(murders)
+```
+
+This tells us much more about the object. We see that the table has 51 rows (50 states plus DC) and five variables. We can show the first six lines using the function `head`:
+
+```{r}
+head(murders)
+```
+
+In this dataset each state is considered an observation and five variables are reported for each state.
+
+Before we go any further in answering our original question about different states, let's get to know the components of this object better.
+
+### The accessor
+
+For our analysis we will need to access the different variables, represented by columns, included in this data frame. To access these variables we use the accessor operator `$` in the following way:
+
+```{r}
+murders$population
+```
+
+But how did we know to use `population`? Above, by applying the function `str` to the obejct `murders`, we revealed the names for each of the five variables stored in this table. We can quickly access the variables names using:
+
+```{r}
+names(murders)
+```
+
+It is important to know that the order of the entries in `murders$population` preserve the order of the rows in our data table. This will later permit us to manipulate one variable based on the results of another. For example, we will be able to order the state names by number of murders.
+
+**Tip**: R comes with a very nice auto-complete functionality that saves us the trouble of typing out all the names. Try typing `murders$p` then hitting the _tab_ key on your keyboard. RStudio has many useful auto-complete feature options.
+
+### Vectors: numerics, characters, and logical
+
+Note that the object `murders$population` is not one number but several. We call these types of objects _vectors_. A single number is technically a vector but in general vectors refer to objects with several entries. The function `length` tells you how many entries are in the vector:
+
+```{r}
+pop <- murders$population
+length(pop)
+```
+
+This particular vector is _numeric_ since population sizes are numbers:
+
+```{r}
+class(pop)
+```
+In a numeric vector, every entry must be a number. 
+
+To store character strings, vectors can also be of class _character_. For example, the state names are characters:
+
+```{r}
+class(murders$state)
+```
+
+As with numeric vectors, all entries in a character vector need to be a character.
+
+Another important type  are _logical vectors_. These must be either `TRUE` or `FALSE`. 
+
+```{r}
+z <- 3 == 2
+z
+class(z)
+```
+
+Here the `==` is a relational operator asking if 3 is equal to 2. Remember that in R, if you just use one `=` when you actually assign avalue. You can see the other _relational operators_ by typing
+
+```{r, eval=FALSE}
+?Comparison
+```
+
+In future sections you will see how useful relational operators can be.
+
+
+### Factors
+
+In the `murders` dataset we might expect the region to also be a character vector. However, it is not:
+
+```{r}
+class(murders$region)
+```
+
+it is a _factor_. Factors are useful for storing categorical data. Notice that there are only 4 regions:
+
+
+```{r}
+levels(murders$region)
+```
+
+So, in the background, R stores these _levels_ as integers and keeps a map to keep track of the labels. This is more memory efficient than storing all the characters. However, factors are also a source of confusion as they can easily be confused with characters but behave differently in different contexts. We will see more of this later. 
+
+In general, we recommend avoiding factors as much as possible although they are sometimes necessary to fit models containing categorical data.
+ 
+
+## Vectors
+
+The most basic unit available in R to store data are _vectors_. Complex datasets can usually be broken down into components that are vectors. For example, in a data frame, each column is a vector. Here we learn more about this important class.
+
+### Creating vectors
+
+We can create vectors using the function `c`, which stands for concatenate. We use `c` to _concatenate_ entires in the following way:
+
+```{r}
+codes <- c(380, 124, 818)
+codes
+```
+
+We can also create character vectors. We use the quotes to denote that the entries are characters rather than variables names.
+
+```{r}
+country <- c("italy", "canada", "egypt")
+country
+```
+
+Note that if you type
+
+```{r, eval=FALSE}
+country <- c(italy, canada, egypt)
+```
+you recieve an error becuase the variables `italy`, `canada` and `egypt` are not defined: R looks for variables with those names and returns an error.
+
+### Names
+
+Sometimes it is useful to name the entries of a vector. For example, when defining a vector of country codes we can use the names to connect the two:
+
+```{r}
+codes <- c(italy = 380, canada = 124, egypt = 818)
+codes
+```
+
+The object `codes` continues to be a numeric vector:
+```{r}
+class(codes)
+```
+
+but with names
+```{r}
+names(codes)
+```
+
+If the use of strings without quotes looks confusing, know that you can use the quotes as well
+
+```{r}
+codes <- c("italy" = 380, "canada" = 124, "egypt" = 818)
+codes
+```
+
+There is no difference between this call and the previous one: one of the many ways R is quirky compared to other languages.
+
+We can also assign names using the `names` function:
+
+```{r}
+codes <- c(380, 124, 818)
+country <- c("italy","canada","egypt")
+names(codes) <- country
+codes
+```
+
+### Sequences
+
+Another useful function for creating vectors generates sequences
+
+```{r}
+seq(1, 10)
+```
+
+The first argument defines the start, and the second the end. The default is to go up in increments of 1, but a third argument let's us tell it how much to jump by:
+
+```{r}
+seq(1, 10, 2)
+```
+
+If we want consecutive integers we can use the following shorthand
+
+```{r}
+1:10
+```
+
+Note that when we use this function, R produces integers, not numerics, because they are typically used to index something:
+
+```{r}
+class(1:10)
+```
+
+However, note that as soon as we create something that's not an integer the class changes:
+
+```{r}
+class(seq(1, 10))
+class(seq(1, 10, 0.5))
+```
+
+### Subsetting
+
+We use square brackets to access specific elements of a list. For the vector `codes` we defined above, we can access the second element using
+```{r}
+codes
+codes[2]
+```
+
+You can get more than one entry by using a multi-entry vector as an index:
+```{r}
+codes[c(1,3)]
+```
+
+The sequences defined above are particularly useful if we want to access, say, the first two elements
+
+```{r}
+codes[1:2]
+```
+
+If the elements have names, we can also access the entries using these names. Here are two examples.
+
+```{r}
+codes["canada"]
+codes[c("egypt","italy")]
+```
+
+### Coercion
+
+In general, _coercion_ is an attempt by R to be flexible with data types. When an entry does not match the expected, R tries to guess what we meant before throwing an error. This can also lead to confusion. Failing to understand _coercion_ can drive a programmer crazy when attempting to code in R since it behaves quite diffently from most other languages in this regard. Let's learn about it with some examples.
+
+We said that elements of a vector must be all of the same type. So if we try to combine, say, numbers and characters you might expect an error
+
+```{r}
+x <- c(1, "canada", 3)
+```
+
+But we don't get one, not even a warning! What happened? Look at `x` and its class:
+
+```{r}
+x
+class(x)
+```
+
+R _coerced_ the data into characters. It guessed that because you put a character string in the vector you meant the 1 and 3 to actually be character strings `"1"` and `"3"`. The fact that not even a warning is issued is an example of how coercion can cause many unnoticed errors in R. 
+
+R also offers functions to force a specific coercion. For example you can turn numbers into characters with 
+
+```{r}
+x <- 1:5
+y <- as.character(x)
+y
+```
+
+And you can turn it back with `as.numeric`. 
+
+```{r}
+as.numeric(y)
+```
+ 
+This function is actually quite useful as datasets that include numbers as character strings are common. 
+
+### Not Availables (NA)
+
+When these coercion functions encounter an impossible case it gives us a warning and turns the entry into a special value called an `NA` for "not available".  For example:
+
+```{r}
+x <- c("1", "b", "3")
+as.numeric(x)
+```
+
+R does not have any guesses for what number you want when you type `b` so it does not try.
+
+Note that as a data scientist you will encounter `NA`s often as they are used for missing data, a common problem in real-life datasets.
+
+
+## Sorting
+
+Now that we have some basic R knowledge under our belt, let's try to gain some insights into the safety of different states in the context of gun murders. 
+
+### `sort` 
+
+We want to rank the states from least to most gun murders. The function `sort` sorts a vector in increasing order. So we can see the number of gun murders by typing 
+
+```{r}
+sort(murders$total)
+```
+
+However, this does not give us information about which states have which murder totals. For example, we don't know which state had `r max(murders$total)` murders in 2010. 
+
+### `order`
+
+The function `order` is closer to what we want. It takes a vector and returns the vector of indexes that sort the input vector. This may sound confusing so let's look at a simple example: we create a vector and sort it:
+
+```{r}
+x <- c(31, 4, 15, 92, 65)
+sort(x)
+```
+
+Rather than sort the vector, the function `order` gives us back the index that, if used to index the vector, will sort it:
+
+```{r}
+index <- order(x)
+x[index]
+```
+
+If we look at this index we see why it works:
+```{r}
+x
+order(x)
+```
+
+Note that the second entry of `x` is the smallest so `order(x)` starts with `2`. The next smallest is the third entry so the second entry is `3` and so on. 
+
+How does this help us order the states by murders? First remember that the entries of vectors you access with `$` follow the same order as the rows in the table. So, for example, these two vectors, containing the state names and abbreviations respectively, are matched by their order:
+
+```{r}
+murders$state[1:10]
+murders$abb[1:10]
+```
+
+So this means we can now order the state names by their total murders by first obtaining the index that orders the vectors according to murder totals, and then indexing the state names or abbreviation vector:
+
+```{r}
+ind <- order(murders$total) 
+murders$abb[ind] 
+```
+
+We see that California had the most murders.
+
+### `max` and `which.max`
+
+If we are only interested in the entry with the largest value we can use `max` for the value
+
+```{r}
+max(murders$total)
+```
+
+and `which.max` for the index of the largest value
+
+```{r}
+i_max <- which.max(murders$total)
+murders$state[i_max]
+```
+
+For the minimum we can use `min` and `which.min` in the same way.
+
+So is California the most dangerous state? In a next section we argue that we should be considering rates not totals. Before doing that we introduce one last order related function: `rank`
+
+
+## Vector arithmetic
+
+California had the most murders. But does this mean it is the most dangerous state? What if it just has many more people than any other state? We can very quickly confirm that, indeed, California has the largest population:
+
+```{r}
+murders$state[which.max(murders$population)]
+```
+
+with over `r floor(max(murders$population)/10^6)` million inhabitants! It is therefore unfair to compare the totals if we are interested in learning how safe the state is.
+
+What we really should be computing is the murders per capita. The reports we describe in the motivating section used murders per 100,000 as the unit. To compute this quantiy, the powerful vector arithmetic capabilities of R come in handy.
+
+### Rescaling
+
+In R, arithmetic operations on vectors occur _element wise_. For a quick example suppose we have height in inches
+
+```{r}
+heights <- c(69, 62, 66, 70, 70, 73, 67, 73, 67, 70)
+```
+and want to covert to centimeters. Note what happens when we multiply `heights` by 2.54:
+
+```{r}
+heights * 2.54
+```
+
+it multiplied each element by 2.54.  Similarly if we want to compute how many inches taller or shorter than the average, 69 inches, we can subtract it from every entry like this
+
+```{r}
+heights - 69
+```
+
+
+### Two vectors
+
+If we have two vectors of the same length, and we sum them in R, they get added entry by entry like this
+
+$$
+\begin{pmatrix}
+a\\
+b\\
+c\\
+d
+\end{pmatrix}
++
+\begin{pmatrix}
+e\\
+f\\
+g\\
+h
+\end{pmatrix}
+=
+\begin{pmatrix}
+a +e\\
+b + f\\
+c + g\\
+d + h
+\end{pmatrix}
+$$
+
+The same holds for other mathematical operations such as `-`, `*` and `/`.
+
+This implies that to compute the murder rates we can simply type
+
+```{r}
+murder_rate <- murders$total / murders$population * 100000
+```
+
+Once we do this, we notice that California is no longer near the top of the list. In fact, we can use what we have learned to order the states by murder rate:
+
+```{r}
+murders$state[order(murder_rate)]
+```
+
+Note that the states are listed in *ascending* order of murder rate. Thus, DC has the highest murder rate.
+
+
+
+
+## Indexing
+
+R provides a powerful and convenient way of indexing vectors. We can, for example, subset a vector based on properties of another vector. We continue our US murders example to demonstrate.
+
+### Subsetting with logicals
+
+We can calculate the murder rate using
+
+```{r}
+murder_rate <- murders$total / murders$population * 100000 
+```
+
+Say you are moving from Italy where, according to an ABC news report, the murder rate is only 0.71 per 100,000. You would prefer to move to a state with a similar rate. Another powerful feature of R is that we can we can use logicals to index vectors. 
+Note that if we compare a vector to a single number, it actually performs the test for each entry. Here is an example related to the question above.
+
+```{r}
+ind <- murder_rate < 0.71
+ind
+```
+
+```{r}
+sum(ind)
+```
+
+
+Or if we want to know if its less than or equal to we can use
+
+```{r}
+ind <- murder_rate <= 0.71
+ind
+```
+
+Note that we get back a logical vector with `TRUE` for each entry smaller than or equal to 0.71. To see which states these are, we can leverage the fact that vectors can be indexed with logicals.
+
+```{r}
+murders$state[ind]
+```
+
+Note that to count how many are TRUE, the function `sum` returns the sum of the entries of a vector and logical vectors get _coerced_ to numeric with `TRUE` coded as 1 and `FALSE` as 0. Thus we can count the states using
+
+```{r}
+sum(ind)
+```
+
+
+### Logical Operators
+
+Suppose we like the mountains and we want to move to a safe state in the West region of the country. We want the murder rate to be at most 1. So we want two different things to be true. Here we can use the logical operator _and_ which in R is `&`. This operation results in a true only when both logicals are true. To see this consider these examples:
+
+```{r}
+TRUE & TRUE
+TRUE & FALSE
+FALSE & FALSE
+```
+
+We can form two logicals:
+
+```{r}
+west <- murders$region == "West"
+safe <- murder_rate <= 1
+```
+
+and we can use the `&`  to get a vector of logicals that tells us which states satisfy both of our conditions:
+
+```{r}
+ind <- safe & west
+murders$state[ind]
+```
+
+### `which`
+
+Suppose we want to look up California's murder rate. For this type of operation, it is convenient to convert vectors of logicals into indexes instead of keeping long vectors of logicals. The function `which` tells us which entries of a logical vector are TRUE. So we can type:
+
+```{r}
+ind <- which(murders$state == "California")
+ind # this is the index that matches the California entry
+
+murder_rate[ind]
+```
+
+### `%in%`
+
+If rather than an index we want a logical that tells us whether or not each element of a first vector is in a second, we can use the function `%in%`. So, say you are not sure if Boston, Dakota and Washington are states, you can find out like this
+
+```{r}
+c("Boston", "Dakota", "Washington") %in% murders$state
+```
+
+
+## Data import
+
+### Importing Spreadsheets
+
+In the R module some of the basics of data import are covered. We described functions available in the default R installation. Here we present a more general discussion and introduce the `tidyverse` packages `readr` and `readxl`.
+
+Currently, one of the most commons ways of storing and sharing data for analysis is through electronic spreadsheets. A spreadsheet stores data in rows and columns. It is basically a file version of a data frame. When saving such a table to a computer file one needs a way to define when a new row or column ends and the other begins. This in turn defines the cells in which single values are stored. 
+
+When creating spreadsheets with text files, like the ones you can create with a simple text editor, a new row is defined with return and columns with some predefined special character. The most common characters are comma (`,`), semicolon (`;`), white space (\  ) and tab (\ \ \ \ ). 
+
+You will also note that sometimes the first row contains column names rather than data. We call this a _header_ and when reading data from a spreadsheet it is important to know if the file has a header or not. Most reading functions assume there is a header. To know if the file has a header, it helps to look at the file before trying to read it. This can be done with a text editor or with RStudio. In RStudio we can do this by navigating to the file location, double clicking on the file and hitting _View File_.
+
+However, not all spreadsheet files are text files. Google Sheets, which are rendered on a browser, are an example. Another example is the proprietary format used by Microsoft Excel. These can't be viewed with a text editor. Given the widespread use of Microsoft Excel software, this format is widely used. Although there are R packages designed to read this format, if you are choosing a file format to save your own data, you generally want to avoid Microsoft Excel. We recommend Google Sheets as a free software tool for organizing data.  
+
+### Paths and the Working Directory
+
+We start by demonstrating how to read in a file that is already saved on your computer. There are several ways to do this and we will discuss three of them. But you only need to learn one to follow along.
+
+The first step is to find the file containing your data and know its location on your file system.
+
+When you are working in R it is important to know your _working directory_. This is the directory in which R will save or look for files by default. You can see your working directory by typing:
+
+```{r, eval=FALSE}
+getwd()
+```
+
+You can change your working directory using the function `setwd`. If you are using RStudio, you can change it by clicking on _Session_.
+
+One thing that file-reading functions have in common is that, **unless a full path is provided, they search for files in the working directory**. For this reason, our recommended approach for beginners is that you create a directory for each analysis and keep the raw data files in that directory. To keep raw data files organized, we recommend creating a `data` directory, especially when the project involves more than one data file.
+
+Because you may not have a data file handy yet, we provide example data files in the `dslabs` package. Once you download and install the `dslabs` package, files will be in the external data (`extdata`) directory:
+
+```{r}
+system.file("extdata", package = "dslabs")
+```
+
+Note that the output of this function call will change depending on your operating system, how you installed R and the version of R. But it will be consistent within your system and you will be able to see the files included in this directory using the function `list.files`:
+
+```{r}
+path <- system.file("extdata", package = "dslabs")
+list.files(path)
+```
+
+Now that we know the location of these files, we are ready to import them into R. To make the code simpler and following along easier, you can move this file to your working directory. You can do this through the file system directly, but you can also do it within R itself using the `file.copy` function. To do this it will help to define a variable with the full path using the function `file.path`. Using `paste` is not recommended since Microsoft Windows and Macs/Linux/Unix use different slashes for the paths. The function `file.path` is aware of your system and chooses the correct slashes. Here is an example:
+
+```{r}
+filename <- "murders.csv"
+fullpath <- file.path(path, filename)
+fullpath
+```
+
+You can now copy the file over to the working directory like this:
+
+```{r}
+file.copy(fullpath, getwd())
+```
+
+You can check if the file is now in your working directory using the `file.exists` function:
+
+```{r}
+file.exists(filename)
+```
+
+### The `readr` and `readxl` packages
+
+Now we are ready to read in the file. `readr` is the `tidyverse` library that includes functions for reading data stored in text file spreadsheets into R. The following functions are available to read-in spreadsheets:
+
+| Function | Format | Typical suffix |
+|----------|--------|---| 
+| read_table | white space separated values | txt |
+| read_csv | comma separated values|  csv |
+| read_csv2 | semicolon separated values | csv |
+| read_tsv | tab delimited separated values | tsv |
+| read_delim | general text file format, must define delimiter | txt |
+
+The `readxl` package provides functions to read in Microsoft Excel formats:
+
+| Function | Format | Typical suffix |
+|----------|--------|---| 
+| read_excel | auto detect the format | xls, xlsx|
+| read_xls | original format |  xls |
+| read_xlsx | new format | xlsx |
+
+
+Note that the Microsoft Excel formats permit you to have more than one spreadsheet in one file. These are referred to as _sheets_. The functions above read the first sheet by default but the `excel_sheets` function gives us the names of the sheets in an excel file. These names can then be passed to the `sheet` argument in the three functions above to read sheets other than the first.
+
+Note that the suffix usually tells us what type of file it is, but there is no guarantee that these always match. We can open the file to take a look or use the function `read_lines` to look at a few lines:
+
+```{r, message=FALSE}
+library(readr)
+read_lines("murders.csv", n_max = 3)
+```
+
+This also shows that there is a header. Now we are ready to read the data into R. From the suffix and the peek at the file we know to use `read_csv`:
+
+```{r, message=FALSE}
+dat <- read_csv(filename)
+```
+
+
+Note that `dat` is a `tibble` with the content in the file:
+
+```{r}
+head(dat)
+```
+
+### R-base functions
+
+R-base also provides import functions. These have similar names to those in the `tidyverse`: `read.table`, `read.csv` and `read.delim` for example. There are a couple of important differences. To show this we read the data with an R-base function:
+
+```{r}
+dat2 <- read.csv(filename)
+```
+
+One difference is that now we have a data frame and not a tibble:
+
+```{r}
+class(dat2)
+```
+
+The other difference is that the characters are converted to factors:
+
+```{r}
+class(dat2$abb)
+class(dat2$region)
+```
+
+This can be avoided by setting the argument `stringsAsFactors` to FALSE.
+
+### Downloading files
+
+Another common place for data to reside is on the internet. When these are data files we can download them and then import them or even read them directly from the web. For example, we note that because our `dslabs` package is on GitHub, the file we downloaded with the package has a url.
+
+```{r}
+url <- "https://raw.githubusercontent.com/rafalab/dslabs/master/inst/extdata/murders.csv"
+```
+
+The `read_csv` file can read these files directly:
+
+```{r, message=FALSE}
+dat <- read_csv(url)
+```
+
+If you want to have a local copy of the file, you can use `download.file`. 
+
+```{r, eval=TRUE}
+download.file(url, "murders.csv")
+```
+
+
+### Nuances
+
+When reading in spreadsheets many things can go wrong. The file might have a multiline header, be missing cells, or it might use an unexpected [encoding]( https://en.wikipedia.org/wiki/Character_encoding). We recommend you read this [post](https://www.joelonsoftware.com/2003/10/08/the-absolute-minimum-every-software-developer-absolutely-positively-must-know-about-unicode-and-character-sets-no-excuses/). 
+
+With experience you will learn how to deal with different challenges. Carefully reading the help files for the functions discussed here will help. Two other functions that are helpful are `scan` and `readLines`. With scan you can read in each cell of a file. Here is an example:
+
+```{r}
+x <- scan(filename, sep=",", what = "c")
+x[1:10]
+```
+
+
+### Removing a file
+
+Now that we are done with the example we will remove the example spreadsheet we copied over to our working directory using the function `file.remove`.
+
+```{r}
+file.remove(filename)
+```
+
+## Practice Problems
+
+Let's get more comfortable writing R code and documenting our results by using the `murders` dataset from `dslabs`. Be sure to include text answers where appropriate. 
+
+```{r}
+library(dslabs)
+data(murders)
+```
+
+
+1. Compute the per 100,000 murder rate for each state and store it in an object called `murder_rate`. Then use the logical operators to create a logical vector named `low` that tells us which entries of `murder_rate` are lower than 1. 
+
+```{r}
+# Your code here
+```
+
+
+2. Now use the results from the previous exercise and the function `which` to determine the indices of `murder_rate` associated with values lower than 1.
+
+```{r}
+# Your code here
+```
+
+3. Use the results from the previous exercise to report the names of the states with murder rates lower than 1.
+
+```{r}
+# Your code here
+```
+
+
+4. Now extend the code from exercises 2 and 3 to report the states in the Northeast with murder rates lower than 1. Hint: Use the previously defined logical vector `low` and the logical operator `&`.
+
+```{r}
+# Your code here
+```
+
+5. Use the `%in%` operator to create a logical vector that answers the question: which of the following are actual abbreviations: MA, ME, MI, MO, MU?
+
+```{r}
+# Your code here
+```
+
+6. The function `nchar` tells you how many characters long a character vector is. For example:
+    
+```{r}
+char_len <- nchar(murders$state)
+char_len[1:5]
+```
+
+
+Write a line of code that assigns to the object `new_names` the state abbreviation when the state name is longer than 8 characters.
+
+```{r}
+# Your code here
+```
+
+
+
+## Practice Problems Solutions
+```{r}
+library(dslabs)
+data(murders)
+```
+
+
+1. Compute the per 100,000 murder rate for each state and store it in an object called `murder_rate`. Then use the logical operators to create a logical vector named `low` that tells us which entries of `murder_rate` are lower than 1. 
+
+**Solution:**
+
+```{r}
+murder_rate <- murders$total / murders$population * 100000 
+low <- murder_rate < 1
+low
+```
+
+
+2. Now use the results from the previous exercise and the function `which` to determine the indices of `murder_rate` associated with values lower than 1.
+
+**Solution:**
+
+```{r}
+ind <- which(murder_rate < 1)
+ind
+```
+
+
+3. Use the results from the previous exercise to report the names of the states with murder rates lower than 1.
+
+**Solution:**
+
+```{r}
+murders$state[ind]
+```
+
+
+4. Now extend the code from exercises 2 and 3 to report the states in the Northeast with murder rates lower than 1. Hint: Use the previously defined logical vector `low` and the logical operator `&`.
+
+**Solution:**
+
+```{r}
+northeast <- murders$region == "Northeast"
+ind <- low & northeast
+murders$state[ind]
+```
+
+
+5. Use the `%in%` operator to create a logical vector that answers the question: which of the following are actual abbreviations: MA, ME, MI, MO, MU?
+
+**Solution:**
+
+```{r}
+c("MA", "ME", "MI", "MO", "MU") %in% murders$abb
+```
+
+
+6. The function `nchar` tells you how many characters long a character vector is. For example:
+    
+    ```{r}
+    char_len <- nchar(murders$state)
+    char_len[1:5]
+    ```
+
+   Write a line of code that assigns to the object `new_names` the state abbreviation when the state name is longer than 8 characters.
+
+**Solution:**
+
+```{r}
+new_names <- ifelse(nchar(murders$state) > 8,
+                    murders$abb,
+                    murders$state)
+new_names
+```   
+
+
+
+
+
+
+

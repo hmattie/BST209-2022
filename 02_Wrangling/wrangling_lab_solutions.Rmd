@@ -1,0 +1,189 @@
+---
+title: 'Lab Solutions: Data Wrangling'
+output: html_document
+---
+
+In this lab, we'll go over one of the most important skills in data science: data wrangling. Data wrangling the art of cleaning and manipulating datasets to prepare it for analysis and visualization. A common estimate is that for most machine learning projects, 80% of the time is spent on data wrangling, and the remaining 20% is spent on actually setting up and training the machine learning model.
+
+It is useful to first try to conceptualize what we want to do with the data, and then look for the code that can do that for us. Useful cheatsheets for data wrangling functions can be found [here](https://rstudio.com/wp-content/uploads/2015/02/data-wrangling-cheatsheet.pdf) and [here](https://rstudio.com/resources/cheatsheets/). 
+
+```{r, message=FALSE, warning=FALSE}
+library(tidyr)
+library(dplyr)
+library(lubridate)
+```
+
+
+1. The [Gapminder Foundation](https://www.gapminder.org/) is an organization dedicated to educating the public by using data to dispel misconceptions about global development. You can load the `gapminder` dataset from the `dslabs` package. 
+
+```{r, message=FALSE, warning=FALSE}
+library(dslabs)
+data(gapminder)
+```
+
+How many observations are there in the `gapminder` dataset? How many variables are there, and what are their names? Can you think of some functions that you could use to quickly explore the data? 
+
+**Solution:**
+
+There are 10,545 observations (rows) and 9 variables (columns) in the `gapminder` data. 
+
+```{r}
+dim(gapminder)
+```
+
+Below are the nine variable names. 
+
+```{r}
+names(gapminder)
+```
+
+Some functions that you could use to quickly explore the data include `summary`, `View`, `head` and `str`. You can also consider graphical explorations, which we will cover later in this course. 
+
+
+2. Using the `arrange` function, re-order the `gapminder` data by country, and then by year (within each country). 
+
+**Solution:**
+
+```{r}
+gapminder = arrange(gapminder, country, year)
+```
+
+
+3. Create a data frame that includes only the year and GDP data for Ethiopia. You can do this by using the `filter` function to select only the rows where `country == "Ethiopia"` and by using the `select` function to select only the `year` and `gdp` columns. Try to do this using the pipe operator `%>%` to avoid intermediate steps. 
+
+**Solution:**
+
+First, you can create a data frame that only has the observations for Ethiopia. 
+
+```{r}
+ethiopia = filter(gapminder, country == "Ethiopia")
+```
+
+Then, you can extract only the columns for year and GDP from the Ethiopia data frame. 
+
+```{r}
+ethiopia_gdp_year = select(ethiopia, gdp, year)
+```
+
+A more elegant solution would be to combine these two steps by using the pipe operator `%>%`. 
+
+```{r}
+ethiopia_gdp_year_piped = gapminder %>% 
+  filter(country == "Ethiopia") %>% 
+  select (gdp, year)
+```
+
+The two approaches produce identical data frames. 
+
+```{r}
+identical(ethiopia_gdp_year, ethiopia_gdp_year_piped)
+```
+
+
+4. Using the `mutate` function, add a new variable to the `gapminder` data frame called `women_population` that stores the approximate number of women in the population. Assume that 52% of the population is women. 
+
+**Solution:**
+
+```{r}
+gapminder = gapminder %>% mutate(women_population = (population*0.52))
+```
+
+
+5. The `group_by` and `summarize` functions can be used to combine data from different rows. Create a dataset that stores the total world population by year. Hint: The `population` variable has some missing values, so you will need to account for them in yor calculation. 
+
+**Solution:**
+
+Calling `group_by(year)` before the summarize statement ensures that the world populations are being calculated by year. Setting `na.rm = TRUE` drops the `NA` values when summing over the country populations. 
+
+```{r}
+world_pop = gapminder %>% 
+  group_by(year) %>% 
+  summarize(population = sum(population, na.rm = TRUE)) %>%
+  ungroup()
+```
+
+
+6. (Advanced) Now create a dataset that stores GDP per capita by world region for the year 2000. 
+
+**Solution:**
+
+This looks very complicated, but is much simpler once you break it down line-by line. 
+
+- `filter(year == 2000)`: Keep only observations from 2000. 
+- `group_by(region)`: Define the grouping by world region. 
+- ` summarize(gdp = sum(gdp, na.rm = TRUE), population = sum(population, na.rm = TRUE))`: Calculate the world population and GDP. 
+- `mutate(gdp_per_capita = gdp/population)`: Create a new variable storing GDP per capita. 
+- `ungroup()`: Remove the grouping. 
+
+Note that the order in which you pipe the functions does matter! 
+
+```{r}
+region_gdp_2010 = gapminder %>% 
+  filter(year == 2000) %>% 
+  group_by(region) %>%
+  summarize(gdp = sum(gdp, na.rm = TRUE), 
+            population = sum(population, na.rm = TRUE)) %>%
+  mutate(gdp_per_capita = gdp/population) %>%
+  ungroup()
+```
+
+
+7. The "wiki_HDI.csv" file contains human development index (HDI) data scraped from [Wikipedia](https://en.wikipedia.org/wiki/List_of_countries_by_Human_Development_Index). There are two columns, `country` and `HDI` (as reported for 2019). Read in this CSV file and save it as a data frame called `hdi`. 
+
+**Solution:**
+
+```{r}
+hdi = read.csv("wiki_HDI.csv")
+```
+
+
+8. Join the `hdi` data frame with the 2011 GDP data in `gapminder`. Choose the join function that will result your joined data frame having the same number of countries and rows as `hdi`. 
+
+**Solution:**
+
+Using the pipe operator, we can filter and select columns from the `gapminder` data before passing it into the join function, all in one line. Because the piping operator assigns `gapminder` as the first argument of `right_join`, the resulting data frame will include all of the rows in `hdi`, not `gapminder`. 
+
+```{r}
+hdi_gdp = gapminder %>% 
+  filter(year == 2011) %>% 
+  select(country, gdp) %>% 
+  right_join(hdi, by = "country")
+```
+
+
+9. Export your joined data frame from Q8 as a CSV file called "HDI_GDP.csv". 
+
+**Solution:**
+
+```{r}
+write.csv(hdi_gdp, file="HDI_GDP.csv")
+```
+
+
+10. Transform the following strings into dates. Assume that all of the strings encode date information in the same order. Save your dates in a vector called `clean_dates`. 
+
+```{r}
+dates <- c("09-03-12", "12-4-9", "0610, 03", "Made on 27 6 1920")
+```
+
+**Solution:**
+
+```{r}
+clean_dates <- dmy(dates)
+clean_dates
+```
+
+
+11. Using `clean_dates` from Q10, create a data frame with columns `clean_dates`, `month`, `day` and `year`. 
+
+**Solution:**
+
+There are many possible approaches for constructing a data frame; here's one of them. 
+
+```{r}
+df <- as.data.frame(clean_dates)
+df <- df %>% mutate(month = month(clean_dates),
+										day = day(clean_dates),
+										year = year(clean_dates))
+df
+```
