@@ -1,6 +1,6 @@
 ---
 title: "Diabetes Mellitus Prediction"
-author: "Tom Pollard, Skyler Shapiro"
+author: "Skyler Shapiro"
 date: "2022/06/21"
 output: 
   html_document: 
@@ -20,7 +20,7 @@ This script runs through a simple workflow for training and testing a diabetes m
 
 You may ask: Why is it important to predict cases of diabetes mellitus in patients?
 
-In the hospital, patient medical records may take days to transfer. Knowledge about chronic conditions  like diabetes can inform clinical decisions about patient care and ultimately improve patient outcomes.
+In the hospital, patient medical records may take days to transfer. Knowledge about chronic conditions like diabetes can inform clinical decisions about patient care and ultimately improve patient outcomes.
 
 Lets begin!
 
@@ -100,7 +100,7 @@ reduced_data <- gossis %>% select(.,
 head(reduced_data) %>% kable()
 ```
 
-## 2. Preprocessing and Missing Data
+## 2. Preprocessing the data
 
 We have to consider the NA values in our data. In a research project, it is critical to investigate the missing data by searching for patterns and replacing missing values (imputation) to see if this affects conclusions. For the simplicity of this demo, we will remove all rows containing missing values.
 
@@ -150,6 +150,7 @@ train_index <- createDataPartition(reduced_data$target_variable, times = 1, p = 
 # Split data into train and test sets, select columns that will be used in model
 train_set <- reduced_data[train_index, ] %>% select(., age, bmi, gender, ethnicity,glucose_apache,icu_type, target_variable)
 head(train_set)
+
 test_set <- reduced_data[-train_index, ] %>% select(., age, bmi, gender, ethnicity,glucose_apache ,icu_type, target_variable)
 head(test_set)
 ```
@@ -174,7 +175,7 @@ table_gossis <- CreateTableOne(vars = allvars, data = train_set,
 kableone(table_gossis)
 ```
 
-## 5. Model Construction
+## 5. Model building
 
 ### 5.1 Train a random forest classifier
 
@@ -203,7 +204,7 @@ forest <- randomForest(target_variable ~ age + bmi + gender + glucose_apache,
               trControl = control)
 ```
 
-### 5.2 View the variable importance
+### 5.2 View variable importance
 
 - Many approaches for computing "importance".
 - `rpart` calculates a metric using the [sum of contributions to splits]((https://cran.r-project.org/web/packages/rpart/vignettes/longintro.pdf)).
@@ -214,8 +215,8 @@ forest <- randomForest(target_variable ~ age + bmi + gender + glucose_apache,
 library(knitr)
 kable(forest$importance)
 ```
-We can see that `glucose_apache` and `bmi` had the most predictive power.
 
+We can see that `glucose_apache` and `bmi` had the most predictive power.
 
 ### 5.3 Predict diabetes mellitus in five unseen patients from test set
 
@@ -242,6 +243,7 @@ print(unseen)
 forest_pred <- predict(forest,
                      newdata = test_set,
                      type="class")
+
 # Combine unseen patients data with corresponding predictions
 data.frame(age = unseen$age,bmi = unseen$bmi,gender = unseen$gender, glucose_apache = unseen$glucose_apache, prediction = forest_pred[1:5], truth_value = test_set$target_variable[1:5]) %>% kable()
 ```
@@ -323,15 +325,14 @@ auc_forest <- auc_forest@y.values[[1]]
 print(auc_forest)
 ```
 
-
 # Over to you!
 
-In you project, it is highly encouraged to explore the following: 
+There are many ways to improve the analysis. For example: 
 
 - Add predictors
 - Perform imputation on missing values
 - Train a more robust model
-- Change the prediction target (e.g. LOS)
+- Change the prediction target
 - Evaluate model calibration
 - Evaluate performance in patient subgroups
 
