@@ -63,11 +63,13 @@ lapply(packages, FUN = function(X) {
 
 ### 1.2 Load in the Dataset
 
+Access the data from PhysioNet from the [Project Page](https://physionet.org/content/widsdatathon2020/). Download 'training_v2.csv' from the folder.
+
 Now we can load in our data and start to work with it.
 
 ```{r}
 # Read in data (might take a few seconds)
-gossis <- read_csv("gossis_post_process-eicu-only-wids.csv")
+gossis <- read_csv("~/Downloads/training_v2.csv")
 ```
 
 ```{r}
@@ -256,7 +258,7 @@ data.frame(age = unseen$age,bmi = unseen$bmi,gender = unseen$gender, glucose_apa
 library("caret")
 
 # Note that "forest refers to the model trained previously
-forest_preds = predict(forest, 
+forest_preds <- predict(forest, 
                      newdata = test_set,
                      type = "class")
 
