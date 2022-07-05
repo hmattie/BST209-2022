@@ -1,0 +1,143 @@
+---
+title: "ED_query_notebook"
+author: "Skyler Shapiro"
+date: "7/5/2022"
+output: html_document
+---
+This script demonstrates how to build a dataset from MIMIC-ED. Briefly, we will:
+
+1. Load in Required Packages
+2. Query Data Using BigQuery
+3. Export Data to CSV
+4. Mini Example: Build a Model
+
+Suppose our research task is to predict hospital admission from a patient visit to the ED. This query seeks to curate a dataset containing patients initial vital signs and other information that we can use to predict hospital admission.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## 1. Load in Required Packages
+
+```{r}
+### 1.2 Query Data
+library(tidyverse)
+library(bigrquery)
+library(dplyr)
+library(caret)
+library(rpart)
+library(ranger)
+```
+
+
+## 2. Load in Required Packages
+New, we will query the data using BigQuery. The `bigrquery` function allows us to use SQL syntax in R to build our dataset. In order to run this code, it is important to have a google cloud that contains a project folder [link here](https://developers.google.com/workspace/guides/create-project). To create a google cloud account, simply sign in on the google cloud website with an existing google account.
+
+Feel free to modify this query, or create your own! To run this code. We included the following variables: `hadm_id`, `intime`, `outtime`, `admitted`, `subject_id`, `stay_id`, `charttime`, `temperature`, `heartrate`, `resprate`, `o2sat`, `sbp`, `dbp`, `rhythm`, `pain`, `icd_code`, `icd_title`, and `rownum`.
+
+```{r}
+# Store Query in query object
+query <- 'WITH
+tmp1 AS (
+    SELECT subject_id, hadm_id, stay_id, intime, outtime,
+    CASE WHEN hadm_id IS NULL THEN 0
+    ELSE 1 END AS admitted
+    FROM `physionet-data.mimic_ed.edstays`
+    ),
+tmp2 AS (
+    SELECT t.hadm_id, t.intime, t.outtime, t.admitted, v.*, d.icd_code, d.icd_title,
+        ROW_NUMBER() OVER (PARTITION BY v.subject_id ORDER BY v.subject_id, v.charttime) AS rownum
+    FROM tmp1 t
+    LEFT JOIN `physionet-data.mimic_ed.vitalsign` v
+    ON t.stay_id = v.stay_id
+    LEFT JOIN `physionet-data.mimic_ed.diagnosis` d
+    ON t.stay_id = d.stay_id
+    AND d.seq_num = 1
+    )
+SELECT *
+FROM tmp2
+WHERE rownum = 1;'
+
+# Put in project folder name from Google Cloud
+projectid = "bst209mimicskyler"
+
+# Run our query on the cloud database
+tb <- bq_project_query(projectid, query)
+# Assign the data to a variable
+cohort = bq_table_download(tb)
+```
+
+## 3. Write to CSV
+```{r}
+# Write data to CSV
+write_csv(cohort,'cohortquery.csv')
+```
+
+## 4. Load and View Dataset
+```{r}
+# Load in dataset
+data <- read.csv("cohortquery.csv")
+head(data)
+```
+
+
+```{r}
+reduced_data <- cohort %>% select("temperature", "heartrate", "resprate", "o2sat", "sbp","dbp","admitted")
+reduced_data$admitted <- as.factor(reduced_data$admitted)
+reduced_data <- na.omit(reduced_data)
+```
+
+
+```{r}
+head(reduced_data)
+```
+
+
+```{r}
+train_index <- createDataPartition(reduced_data$admitted, times = 1, p = 0.8, list = FALSE)
+
+# Split data into train and test sets, select columns that will be used in model
+train_set <- reduced_data[train_index, ]
+test_set <- reduced_data[-train_index, ]
+```
+
+
+
+```{r eval = FALSE}
+tgrid <- expand.grid(
+  .mtry = 2:4,
+  .splitrule = "gini",
+  .min.node.size = c(10, 20)
+)
+
+fitControl <- trainControl(method = "CV",
+                           number = 5,
+                           verboseIter = TRUE)
+
+rfit <- train(admitted ~ .,
+               data = train_set,
+              method = "ranger",
+               num.trees = 500,
+                 tuneGrid = tgrid,
+                trControl = fitControl)
+```
+
+
+```{r eval = FALSE}
+# preds <- predict(rfit, test_set)
+# confusionMatrix(as.factor(preds), test_set$admitted)
+pred <- predict(object = rfit, newdata = test_set)
+confusionMatrix(pred, test_set$admitted, positive = '1')
+```
+
+
+
+
+
+
+
+
+
+
+
+
