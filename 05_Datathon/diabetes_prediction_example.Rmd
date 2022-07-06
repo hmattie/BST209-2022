@@ -1,6 +1,6 @@
 ---
 title: "Diabetes Mellitus Prediction"
-author: "Tom Pollard, Skyler Shapiro"
+author: "Skyler Shapiro"
 date: "2022/06/21"
 output: 
   html_document: 
@@ -8,19 +8,26 @@ output:
     toc: true
 ---
 
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+# options(gargle_oauth_email = TRUE)
+options(gargle_verbosity = "info")
+```
+
 ## 0. Introduction
 
-This script runs through a simple workflow for training and testing a diabetes mellitus prediction model. Briefly, we will:
+This script runs through a simple workflow for training and testing a diabetes mellitus prediction model. 
+Briefly, we will:
 
-1. Load in Required Packages and Gather Data
+1. Load in required packages and gather data
 2. Preprocess the data and remove missing values 
-3. Split the data into training and testing sets.
-4. Build a random forest classifier using the training set.
-5. Evaluate our model on the test set.
+3. Split the data into training and testing sets
+4. Build a random forest classifier using the training set
+5. Evaluate our model on the test set
 
 You may ask: Why is it important to predict cases of diabetes mellitus in patients?
 
-In the hospital, patient medical records may take days to transfer. Knowledge about chronic conditions  like diabetes can inform clinical decisions about patient care and ultimately improve patient outcomes.
+In the hospital, patient medical records may take days to transfer. Knowledge about chronic conditions like diabetes can inform clinical decisions about patient care and ultimately improve patient outcomes.
 
 Lets begin!
 
@@ -28,32 +35,18 @@ Lets begin!
 
 ### 1.1 Load in Required Packages 
 
-First, we will ensure all the R packages necessary for our project are installed and loaded in.
-
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-
-# options(gargle_oauth_email = TRUE)
-options(gargle_verbosity = "info")
-
-```
+First, let's load the R packages necessary for our project.
 
 ```{r}
-
 # Checking that all required packages are installed
 if(!require("tidyverse")) install.packages("tidyverse")
 if(!require("tableone")) install.packages("tableone")
 if(!require("caret")) install.packages("caret")
 if(!require("dplyr")) install.packages("dplyr")
-if(!require("rpart")) install.packages("rpart")
-if(!require("rpart.plot")) install.packages("rpart.plot")
 if(!require("ROCR")) install.packages("ROCR")
 if(!require("knitr")) install.packages("knitr")
-if(!require("randomForest")) install.packages("randomForest")
-
 # List of packages to load
-packages <- c("tidyverse", "tableone", "caret","dplyr","ROCR", "knitr","randomForest")
-
+packages <- c("tidyverse", "tableone", "caret","dplyr","ROCR", "knitr")
 # Load packages
 lapply(packages, FUN = function(X) {
     do.call("require", list(X)) 
@@ -81,10 +74,10 @@ dim(gossis)
 We can see our data has `r dim(gossis)[1]` entries and `r dim(gossis)[2]` Variables. Let's see what our data actually looks like!
 
 ```{r}
-head(gossis[,1:7]) %>% kable(caption = "Gossis (1st seven variables)")
+head(gossis[,1:7]) %>% kable(caption = "GOSSIS (1st seven variables)")
 ```
 
-Next, we will select the variables we want to examine, some of which may end up in our final model. Here, we choose to include the following: `bmi`, `age`, `ethnicity`, `gender`, `icu_type`, and our target variable: `diabetes_mellitus`.
+Next, we will select the variables we want to examine, some of which may end up in our final model. Here, we choose to include the following: `bmi`, `age`, `ethnicity`, `gender`, `icu_type`, and our outcome variable: `diabetes_mellitus`.
 
 ```{r}
 #  Select subset of variables from original data
@@ -95,11 +88,10 @@ reduced_data <- gossis %>% select(bmi,
                                   icu_type,
                                   glucose_apache,
                                   diabetes_mellitus)
-
 head(reduced_data) %>% kable()
 ```
 
-## 2. Preprocessing and Missing Data
+## 2. Preprocessing the data
 
 We have to consider the NA values in our data. In a research project, it is critical to investigate the missing data by searching for patterns and replacing missing values (imputation) to see if this affects conclusions. For the simplicity of this demo, we will remove all rows containing missing values.
 
@@ -108,16 +100,12 @@ However, in your project, feel free to experiment with different imputation tech
 ```{r data_types, echo=TRUE}
 # Check to see number of missing values in each column
 colSums(is.na(reduced_data))
-
 # Check number of rows before removing NA
 nrow(reduced_data)
-
 # Remove rows with NA for age, bmi, ethnicity, gender, or diabetes_mellitus
 reduced_data <- drop_na(reduced_data)
-
 # Check number of rows after removing NA
 nrow(reduced_data)
-
 # We can see there are no NA values in our data
 colSums(is.na(reduced_data))
 ```
@@ -125,11 +113,9 @@ colSums(is.na(reduced_data))
 Next we will encode our categorical variables. Encoding is the process of reshaping and binarizing categorical data to better suit machine learning models.
 
 ```{r}
-
 # Convert ethnicity and diabetes_mellitus to factor
 gossis$ethnicity <- as.factor(gossis$ethnicity)
 gossis$diabetes_mellitus <- as.factor(gossis$diabetes_mellitus)
-
 # Encode gender variable: male = 1, non-male = 0
 gossis$gender <- ifelse(gossis$gender == "M",1,0)
 ```
@@ -140,22 +126,16 @@ gossis$gender <- ifelse(gossis$gender == "M",1,0)
 We will only include four predictors in our model: `age`, `bmi`, `gender`, and `glucose apache`. Feel free to include more or choose entirely different predictors in your model!
 
 ```{r training_test, echo=TRUE}
-library(caret)
-library(dplyr)
-
 # Set the random number seed for reproducibility
 set.seed(1)
-
 # CHOOSE VARIABLE YOU WANT TO PREDICT HERE!
-reduced_data$target_variable <- as.factor(reduced_data$diabetes_mellitus)
-
-# Create data partition using the target variable
-train_index <- createDataPartition(reduced_data$target_variable, times = 1, p = 0.8, list = FALSE)
-
+reduced_data$outcome_variable <- as.factor(reduced_data$diabetes_mellitus)
+# Create data partition using the outcome variable
+train_index <- createDataPartition(reduced_data$outcome_variable, times = 1, p = 0.8, list = FALSE)
 # Split data into train and test sets, select columns that will be used in model
-train_set <- reduced_data[train_index, ] %>% select(., age, bmi, gender, ethnicity,glucose_apache,icu_type, target_variable)
+train_set <- reduced_data[train_index, ] %>% select(- diabetes_mellitus)
 head(train_set)
-test_set <- reduced_data[-train_index, ] %>% select(., age, bmi, gender, ethnicity,glucose_apache ,icu_type, target_variable)
+test_set <- reduced_data[-train_index, ] %>% select(- diabetes_mellitus)
 head(test_set)
 ```
 
@@ -167,19 +147,15 @@ head(test_set)
 - [TableOne documentation](https://cran.r-project.org/web/packages/tableone/tableone.pdf)
 
 ```{r tableone, echo=TRUE}
-library(tableone)
-
 allvars = c("bmi", "age", "gender", "ethnicity","glucose_apache","icu_type")
 catvars = c("ethnicity","gender", "icu_type")
-
 table_gossis <- CreateTableOne(vars = allvars, data = train_set, 
                 factorVars = catvars,
-                strata="target_variable")
-
-kableone(table_gossis)
+                strata="outcome_variable")
+kableone(table_gossis, caption = "Demographics")
 ```
 
-## 5. Model Construction
+## 5. Model building
 
 ### 5.1 Train a random forest classifier
 
@@ -188,51 +164,47 @@ kableone(table_gossis)
 
 ```{r train_model, echo=TRUE}
 # Define forest tuning parameters
-
 # 5-fold cross validation
 control <- trainControl(method='repeatedcv', 
-                        number=5, 
-                        repeats=3)
-
+                        number=5)
 # Number of variables tried at each split
 mtry <- sqrt(ncol(train_set))
-
 # Grid search is a linear search through a vector of mtry values
 tunegrid <- expand.grid(.mtry=mtry)
-
 # Create classification forest using age, bmi, and gender
-forest <- randomForest(target_variable ~ age + bmi + gender + glucose_apache, 
+forest <- train(outcome_variable ~ age + bmi + gender + glucose_apache, 
               data = train_set,
+              method = "rf",
               metric = "Accuracy",
               tuneGrid = tunegrid,
               trControl = control)
 ```
 
-### 5.2 View the variable importance
+### 5.2 View variable importance
 
 - Many approaches for computing "importance".
-- `rpart` calculates a metric using the [sum of contributions to splits]((https://cran.r-project.org/web/packages/rpart/vignettes/longintro.pdf)).
 - Shapley Additive exPlanations (ShAP) values are a popular alternative.
 - Compute the marginal contribution of a feature across a combination of features.
+- We will use `caret` variable importance [Documentation](https://topepo.github.io/caret/variable-importance.html)
 
 ```{r importance, echo=TRUE}
-library(knitr)
-kable(forest$importance)
+# Calculate variable importance
+importance <- varImp(forest)
+kable(importance$importance)
 ```
-We can see that `glucose_apache` and `bmi` had the most predictive power.
 
+We can see that `glucose_apache` and `bmi` had the most predictive power.
 
 ### 5.3 Predict diabetes mellitus in five unseen patients from test set
 
 #### Select unseen patients from testing set
 
-- Let's look five unseen patients in our test set.
-- What outcome do you expect for these patients?
+- Let's look at five unseen patients in our test set (i.e. patients not used in training).
+- What status do you expect for these patients?
 
 ```{r select_unseen, echo=TRUE}
 unseen <- head(test_set, 5) %>% 
           select(age, bmi, gender, glucose_apache)
-
 print(unseen)
 ```
 
@@ -240,15 +212,15 @@ print(unseen)
 
 - Is the model correct for this patient?
 - `type="prob"` to output probabilities
-- `type="class"` to output classes
+- `type="raw"` to output classes
 
 ```{r predict_unseen, echo=TRUE}
 # Make predictions on testing set
 forest_pred <- predict(forest,
                      newdata = test_set,
-                     type="class")
+                     type="raw")
 # Combine unseen patients data with corresponding predictions
-data.frame(age = unseen$age,bmi = unseen$bmi,gender = unseen$gender, glucose_apache = unseen$glucose_apache, prediction = forest_pred[1:5], truth_value = test_set$target_variable[1:5]) %>% kable()
+data.frame(age = unseen$age,bmi = unseen$bmi,gender = unseen$gender, glucose_apache = unseen$glucose_apache, prediction = forest_pred[1:5], truth_value = test_set$outcome_variable[1:5]) %>% kable()
 ```
 
 ## 6. Model Evaluation
@@ -257,21 +229,13 @@ data.frame(age = unseen$age,bmi = unseen$bmi,gender = unseen$gender, glucose_apa
 
 - A confusion matrix relates predictions to the ground truth.
 - Forms the basis for evaluation metrics.
-- Alive is our "0" (-ve). Expired is our "1" (+ve).
+- Non-diabetes is our "0" (-ve). Diabetes is our "1" (+ve).
 
 ```{r create_confusion_matrix, echo=TRUE}
-library("caret")
-
-# Note that "forest refers to the model trained previously
-forest_preds <- predict(forest, 
-                     newdata = test_set,
-                     type = "class")
-
 # Ground truth is recorded in the GOSSIS data
-confusionMatrix(forest_preds,
-                test_set$target_variable,
+confusionMatrix(forest_pred,
+                test_set$outcome_variable,
                 positive='1')
-
 ```
 
 ### 6.2 Evaluation Measures
@@ -307,37 +271,28 @@ confusionMatrix(forest_preds,
 We'll use the [ROCR package](https://cran.r-project.org/web/packages/ROCR/index.html) ("Visualizing the Performance of Scoring Classifiers") to plot the curve.
 
 ```{r AUROC, echo=TRUE}
-library("ROCR")
-
 # Get the probabilities for our forest predictions
 forest_probs = predict(forest, newdata = test_set, type = "prob")
 forest_probs = forest_probs[,2]
-
-# Create a "prediction" object using our probabilities and the target classes
-forest_roc <- prediction(forest_probs, test_set$target_variable)
+# Create a "prediction" object using our probabilities and the outcome variable
+forest_roc <- prediction(forest_probs, test_set$outcome_variable)
 forest_perf <- performance(forest_roc, measure = "tpr", x.measure = "fpr")
-
 # Plot the ROC curve
 plot(forest_perf, col=rainbow(10))
 abline(a = 0, b = 1)
-
 # Calculate the AUC
 auc_forest <- performance(forest_roc, measure = "auc")
 auc_forest <- auc_forest@y.values[[1]]
-
 print(auc_forest)
 ```
 
-
 # Over to you!
 
-In you project, it is highly encouraged to explore the following: 
+There are many ways to improve the analysis. For example: 
 
 - Add predictors
 - Perform imputation on missing values
 - Train a more robust model
-- Change the prediction target (e.g. LOS)
+- Change the prediction target
 - Evaluate model calibration
 - Evaluate performance in patient subgroups
-
-
