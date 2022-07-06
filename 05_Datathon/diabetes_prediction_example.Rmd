@@ -88,8 +88,7 @@ Next, we will select the variables we want to examine, some of which may end up 
 
 ```{r}
 #  Select subset of variables from original data
-reduced_data <- gossis %>% select(., 
-                                  bmi, 
+reduced_data <- gossis %>% select(bmi, 
                                   age,
                                   gender,
                                   ethnicity,
@@ -110,8 +109,14 @@ However, in your project, feel free to experiment with different imputation tech
 # Check to see number of missing values in each column
 colSums(is.na(reduced_data))
 
+# Check number of rows before removing NA
+nrow(reduced_data)
+
 # Remove rows with NA for age, bmi, ethnicity, gender, or diabetes_mellitus
 reduced_data <- drop_na(reduced_data)
+
+# Check number of rows after removing NA
+nrow(reduced_data)
 
 # We can see there are no NA values in our data
 colSums(is.na(reduced_data))
@@ -125,7 +130,7 @@ Next we will encode our categorical variables. Encoding is the process of reshap
 gossis$ethnicity <- as.factor(gossis$ethnicity)
 gossis$diabetes_mellitus <- as.factor(gossis$diabetes_mellitus)
 
-# Encode gender variable: male = 1, female = 0
+# Encode gender variable: male = 1, non-male = 0
 gossis$gender <- ifelse(gossis$gender == "M",1,0)
 ```
 
