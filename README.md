@@ -4,14 +4,11 @@
 Welcome to the BST 209 course repository! You can find and download all course materials here. 
 
 # Instructors
-* Heather Mattie
-* hemattie@hsph.harvard.edu
+* Heather Mattie  hemattie@hsph.harvard.edu
 
-* Leo Celi
-* lceli@mit.edu
+* Leo Celi  lceli@mit.edu
 
-* Tom Pollard
-* tpollard@mit.edu
+* Tom Pollard tpollard@mit.edu
 
 # Teaching Assistants
 
