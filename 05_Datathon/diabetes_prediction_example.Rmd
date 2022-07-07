@@ -81,8 +81,7 @@ Next, we will select the variables we want to examine, some of which may end up 
 
 ```{r}
 #  Select subset of variables from original data
-reduced_data <- gossis %>% select(, 
-                                  bmi, 
+reduced_data <- gossis %>% select(bmi, 
                                   age,
                                   gender,
                                   ethnicity,
