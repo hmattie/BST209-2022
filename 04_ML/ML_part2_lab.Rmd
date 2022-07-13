@@ -1,5 +1,5 @@
 ---
-title: 'Day 5 Lab: Machine Learning II'
+title: 'Lab: Machine Learning II'
 output: html_document
 ---
 
