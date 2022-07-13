@@ -45,8 +45,3 @@ test_set = slice(dat, -index_train)
    Obtain the accuracy, confusion matrix, and other relevant diagnostic statistics for the test set. Explain what the confusion matrix and the sensitivity/specificity are telling you about the types of errors that your model is making. 
 
 
-3. Using the `naiveBayes` function from the `e1071` package, fit a Naive Bayes model to the training set that predicts `labels` based on `radius_mean` and `texture_mean`. Then, use the `predict` function (with `type="raw"`) to get probability estimates for the test set. You can either convert the probabilities to predicted response labels by hand as you did for Q2, or let the `predict` function (with `type="class"`) take care of it for you. Use a cutoff of 0.5. 
-
-   Obtain the accuracy, confusion matrix, and other relevant diagnostic statistics for the test set. Compare the performance of your Naive Bayes model with your logistic regression model. 
-
-4. Make a scatterplot of `radius_mean` vs. `texture_mean` in the test dataset. Color the points that both models (logistic regression and Naive Bayes) classify as "Benign" in one color, the points that both models classify as "Malignant" in a second color, and the points where the models disagree in a third color. Based on this visualization, does it make sense that these observations are the ones that the two classifiers did not agree on? Do these observations tend to belong to a particular outcome class? 

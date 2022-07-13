@@ -424,26 +424,6 @@ response labels (use a cutoff of 0.5).</p>
 statistics for the test set. Explain what the confusion matrix and the
 sensitivity/specificity are telling you about the types of errors that
 your model is making.</p></li>
-<li><p>Using the <code>naiveBayes</code> function from the
-<code>e1071</code> package, fit a Naive Bayes model to the training set
-that predicts <code>labels</code> based on <code>radius_mean</code> and
-<code>texture_mean</code>. Then, use the <code>predict</code> function
-(with <code>type=&quot;raw&quot;</code>) to get probability estimates for the test
-set. You can either convert the probabilities to predicted response
-labels by hand as you did for Q2, or let the <code>predict</code>
-function (with <code>type=&quot;class&quot;</code>) take care of it for you. Use a
-cutoff of 0.5.</p>
-<p>Obtain the accuracy, confusion matrix, and other relevant diagnostic
-statistics for the test set. Compare the performance of your Naive Bayes
-model with your logistic regression model.</p></li>
-<li><p>Make a scatterplot of <code>radius_mean</code>
-vs. <code>texture_mean</code> in the test dataset. Color the points that
-both models (logistic regression and Naive Bayes) classify as “Benign”
-in one color, the points that both models classify as “Malignant” in a
-second color, and the points where the models disagree in a third color.
-Based on this visualization, does it make sense that these observations
-are the ones that the two classifiers did not agree on? Do these
-observations tend to belong to a particular outcome class?</p></li>
 </ol>
 
 
