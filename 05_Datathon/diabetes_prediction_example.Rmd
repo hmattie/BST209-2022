@@ -10,7 +10,6 @@ output:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-# options(gargle_oauth_email = TRUE)
 options(gargle_verbosity = "info")
 ```
 
@@ -45,18 +44,21 @@ if(!require("caret")) install.packages("caret")
 if(!require("dplyr")) install.packages("dplyr")
 if(!require("ROCR")) install.packages("ROCR")
 if(!require("knitr")) install.packages("knitr")
+
 # List of packages to load
-packages <- c("tidyverse", "tableone", "caret","dplyr","ROCR", "knitr")
+packages <- c("tidyverse", "tableone", "caret", "dplyr", "ROCR", "knitr")
+
 # Load packages
 lapply(packages, FUN = function(X) {
-    do.call("require", list(X)) 
+    do.call("require", list(X))
 })
 ```
 
 
 ### 1.2 Load in the Dataset
 
-Access the data from PhysioNet from the [Project Page](https://physionet.org/content/widsdatathon2020/). Download 'training_v2.csv' from the folder.
+Access the data from PhysioNet from the [Project Page](https://physionet.org/content/widsdatathon2020/). 
+Download 'training_v2.csv' from the folder.
 
 Now we can load in our data and start to work with it.
 
@@ -74,14 +76,14 @@ dim(gossis)
 We can see our data has `r dim(gossis)[1]` entries and `r dim(gossis)[2]` Variables. Let's see what our data actually looks like!
 
 ```{r}
-head(gossis[,1:7]) %>% kable(caption = "GOSSIS (1st seven variables)")
+head(gossis[, 1:7]) %>% kable(caption = "GOSSIS (1st seven variables)")
 ```
 
 Next, we will select the variables we want to examine, some of which may end up in our final model. Here, we choose to include the following: `bmi`, `age`, `ethnicity`, `gender`, `icu_type`, and our outcome variable: `diabetes_mellitus`.
 
 ```{r}
 #  Select subset of variables from original data
-reduced_data <- gossis %>% select(bmi, 
+reduced_data <- gossis %>% select(bmi,
                                   age,
                                   gender,
                                   ethnicity,
@@ -117,7 +119,7 @@ Next we will encode our categorical variables. Encoding is the process of reshap
 gossis$ethnicity <- as.factor(gossis$ethnicity)
 gossis$diabetes_mellitus <- as.factor(gossis$diabetes_mellitus)
 # Encode gender variable: male = 1, non-male = 0
-gossis$gender <- ifelse(gossis$gender == "M",1,0)
+gossis$gender <- ifelse(gossis$gender == "M", 1, 0)
 ```
 
 
@@ -131,7 +133,8 @@ set.seed(1)
 # CHOOSE VARIABLE YOU WANT TO PREDICT HERE!
 reduced_data$outcome_variable <- as.factor(reduced_data$diabetes_mellitus)
 # Create data partition using the outcome variable
-train_index <- createDataPartition(reduced_data$outcome_variable, times = 1, p = 0.8, list = FALSE)
+train_index <- createDataPartition(reduced_data$outcome_variable,
+                                   times = 1, p = 0.8, list = FALSE)
 # Split data into train and test sets, select columns that will be used in model
 train_set <- reduced_data[train_index, ] %>% select(- diabetes_mellitus)
 head(train_set)
@@ -147,11 +150,13 @@ head(test_set)
 - [TableOne documentation](https://cran.r-project.org/web/packages/tableone/tableone.pdf)
 
 ```{r tableone, echo=TRUE}
-allvars = c("bmi", "age", "gender", "ethnicity","glucose_apache","icu_type")
-catvars = c("ethnicity","gender", "icu_type")
-table_gossis <- CreateTableOne(vars = allvars, data = train_set, 
+allvars <- c("bmi", "age", "gender", "ethnicity", "glucose_apache", "icu_type")
+catvars <- c("ethnicity", "gender", "icu_type")
+
+table_gossis <- CreateTableOne(vars = allvars, data = train_set,
                 factorVars = catvars,
-                strata="outcome_variable")
+                strata = "outcome_variable")
+
 kableone(table_gossis, caption = "Demographics")
 ```
 
@@ -165,14 +170,13 @@ kableone(table_gossis, caption = "Demographics")
 ```{r train_model, echo=TRUE}
 # Define forest tuning parameters
 # 5-fold cross validation
-control <- trainControl(method='repeatedcv', 
-                        number=5)
+control <- trainControl(method = "repeatedcv", number = 5)
 # Number of variables tried at each split
 mtry <- sqrt(ncol(train_set))
 # Grid search is a linear search through a vector of mtry values
-tunegrid <- expand.grid(.mtry=mtry)
+tunegrid <- expand.grid(.mtry = mtry)
 # Create classification forest using age, bmi, and gender
-forest <- train(outcome_variable ~ age + bmi + gender + glucose_apache, 
+forest <- train(outcome_variable ~ age + bmi + gender + glucose_apache,
               data = train_set,
               method = "rf",
               metric = "Accuracy",
@@ -203,7 +207,7 @@ We can see that `glucose_apache` and `bmi` had the most predictive power.
 - What status do you expect for these patients?
 
 ```{r select_unseen, echo=TRUE}
-unseen <- head(test_set, 5) %>% 
+unseen <- head(test_set, 5) %>%
           select(age, bmi, gender, glucose_apache)
 print(unseen)
 ```
@@ -218,9 +222,13 @@ print(unseen)
 # Make predictions on testing set
 forest_pred <- predict(forest,
                      newdata = test_set,
-                     type="raw")
+                     type = "raw")
+
 # Combine unseen patients data with corresponding predictions
-data.frame(age = unseen$age,bmi = unseen$bmi,gender = unseen$gender, glucose_apache = unseen$glucose_apache, prediction = forest_pred[1:5], truth_value = test_set$outcome_variable[1:5]) %>% kable()
+data.frame(age = unseen$age, bmi = unseen$bmi, gender = unseen$gender,
+           glucose_apache = unseen$glucose_apache,
+           prediction = forest_pred[1:5],
+           truth_value = test_set$outcome_variable[1:5]) %>% kable()
 ```
 
 ## 6. Model Evaluation
@@ -235,7 +243,7 @@ data.frame(age = unseen$age,bmi = unseen$bmi,gender = unseen$gender, glucose_apa
 # Ground truth is recorded in the GOSSIS data
 confusionMatrix(forest_pred,
                 test_set$outcome_variable,
-                positive='1')
+                positive = "1")
 ```
 
 ### 6.2 Evaluation Measures
@@ -272,13 +280,13 @@ We'll use the [ROCR package](https://cran.r-project.org/web/packages/ROCR/index.
 
 ```{r AUROC, echo=TRUE}
 # Get the probabilities for our forest predictions
-forest_probs = predict(forest, newdata = test_set, type = "prob")
-forest_probs = forest_probs[,2]
+forest_probs <- predict(forest, newdata = test_set, type = "prob")
+forest_probs <- forest_probs[, 2]
 # Create a "prediction" object using our probabilities and the outcome variable
 forest_roc <- prediction(forest_probs, test_set$outcome_variable)
 forest_perf <- performance(forest_roc, measure = "tpr", x.measure = "fpr")
 # Plot the ROC curve
-plot(forest_perf, col=rainbow(10))
+plot(forest_perf, col = rainbow(10))
 abline(a = 0, b = 1)
 # Calculate the AUC
 auc_forest <- performance(forest_roc, measure = "auc")
