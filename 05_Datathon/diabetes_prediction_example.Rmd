@@ -276,7 +276,7 @@ data.frame(age = test_set$age,
 # Ground truth is recorded in the GOSSIS data
 confusionMatrix(forest_pred,
                 test_set$outcome_variable,
-                positive = "1")
+                positive = "1")$tab
 ```
 
 ### 6.2 Evaluation metrics
