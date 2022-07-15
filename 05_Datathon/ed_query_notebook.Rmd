@@ -6,10 +6,10 @@ output: html_document
 ---
 This script demonstrates how to build a dataset from MIMIC-ED. Briefly, we will:
 
-1. Load in Required Packages
-2. Query Data Using BigQuery
-3. Export Data to CSV
-4. Mini Example: Build a Model
+1. Load required packages
+2. Query data using BigQuery
+3. Export data to CSV
+4. Mini example: build a model
 
 Suppose our research task is to predict hospital admission from a patient visit to the ED. This query seeks to curate a dataset containing patients initial vital signs and other information that we can use to predict hospital admission.
 
@@ -17,25 +17,42 @@ Suppose our research task is to predict hospital admission from a patient visit 
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## 1. Load in Required Packages
+## 1. Load required packages
 
-```{r}
+```{r, echo=FALSE, include=FALSE}
 ### 1.2 Query Data
-library(tidyverse)
-library(bigrquery)
-library(dplyr)
-library(caret)
-library(rpart)
-library(ranger)
+if(!require("tidyverse")) install.packages("tidyverse")
+if(!require("bigrquery")) install.packages("bigrquery")
+if(!require("dplyr")) install.packages("dplyr")
+if(!require("caret")) install.packages("caret")
+if(!require("rpart")) install.packages("rpart")
+if(!require("ranger")) install.packages("ranger")
+
+# List of packages to load
+packages <- c("tidyverse", "bigrquery", "dplyr", "caret", "rpart",
+              "ranger")
+
+# Load packages
+lapply(packages, FUN = function(X) {
+    do.call("require", list(X))
+})
 ```
 
-
 ## 2. Load in Required Packages
+
 New, we will query the data using BigQuery. The `bigrquery` function allows us to use SQL syntax in R to build our dataset. In order to run this code, it is important to have a google cloud that contains a project folder [link here](https://developers.google.com/workspace/guides/create-project). To create a google cloud account, simply sign in on the google cloud website with an existing google account.
 
 Feel free to modify this query, or create your own! To run this code. We included the following variables: `hadm_id`, `intime`, `outtime`, `admitted`, `subject_id`, `stay_id`, `charttime`, `temperature`, `heartrate`, `resprate`, `o2sat`, `sbp`, `dbp`, `rhythm`, `pain`, `icd_code`, `icd_title`, and `rownum`.
 
-```{r}
+```{r, echo=FALSE, include=FALSE}
+# Credentials
+# BQ_AUTH_PATH <- "file_name.json"
+BQ_AUTH_EMAIL <- "youremail@address.com"
+BQ_PROJECT_ID <- "physionet-data"
+
+# Auth to BQ via 'json' credentials
+bq_auth(email=BQ_AUTH_EMAIL)
+
 # Store Query in query object
 query <- 'WITH
 tmp1 AS (
@@ -58,11 +75,9 @@ SELECT *
 FROM tmp2
 WHERE rownum = 1;'
 
-# Put in project folder name from Google Cloud
-projectid = "bst209mimicskyler"
-
 # Run our query on the cloud database
-tb <- bq_project_query(projectid, query)
+tb <- bq_project_query(BQ_PROJECT_ID, query)
+
 # Assign the data to a variable
 cohort = bq_table_download(tb)
 ```
