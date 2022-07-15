@@ -151,17 +151,19 @@ head(test_set)
 - [TableOne documentation](https://cran.r-project.org/web/packages/tableone/tableone.pdf)
 
 ```{r tableone, echo=TRUE}
-allvars <- c("bmi", "age", "gender", "ethnicity", "glucose_apache")
-catvars <- c("ethnicity", "gender")
+allvars <- c("bmi", "age", "gender", "glucose_apache")
+catvars <- c("gender")
 
 table_gossis <- CreateTableOne(vars = allvars, data = train_set,
                 factorVars = catvars,
                 strata = "outcome_variable")
 
-kableone(table_gossis, caption = "Demographics")
+kableone(table_gossis, caption = "Summary statistics of the training set")
 ```
 
 ## 4. Preprocessing the data
+
+### 4.1 Impute missing values
 
 We have to consider the NA values in our data. For simplicity, we will replace missing values with the median of the train_set.
 
@@ -180,6 +182,14 @@ for (col in predictors) {
         median(train_set[[col]], na.rm = TRUE)
 }
 ```
+
+### 4.2 Normalization
+
+For many models it is important to normalize the data. Without normalization, variables with larger magnitudes may have a greater effect on the model.
+
+One common approach for normalization is to divide each variable by its standard deviation and subtract the mean. As before, to avoid data leakage, normalization should be done after splitting into training and test sets.
+
+Our tree model does not require normalization, so we will skip this step.
 
 ## 5. Model building
 
@@ -274,21 +284,16 @@ confusionMatrix(forest_pred,
 #### 6.2.1 Accuracy
 
 - How many shots did we take? What proportion hit the target?
-- 106 shots. 96 hit the mark. Accuracy = ?
 - Accuracy = $\frac{(TP + TN)}{(TP + TN + FP + FN)}$
 
 #### 6.2.2 Sensitivity
 
 - (AKA "Recall" AKA "True Positive Rate")
-- Of the patients who do not survive, what proportion did we correctly predict?
-- 9 people did not survive. We called 2. Sensitivity = ?
 - Recall = $\frac{(TP)}{(TP + FN)}$
 
 #### 6.2.1 Specificity 
 
 - (AKA "True Negative Rate")
-- What proportion of survivors did we say would survive?
-- 97 survivors. We predicted 5 would die. Specificity = ?
 - Specificity = $\frac{(TN)}{(TN + FP)}$
 
 #### 6.2.1 Area under ROC Curve (AUC)
