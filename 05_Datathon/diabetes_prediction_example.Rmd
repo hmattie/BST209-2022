@@ -19,8 +19,8 @@ This script runs through a simple workflow for training and testing a diabetes m
 Briefly, we will:
 
 1. Load required packages and gather data
-2. Preprocess the data and remove missing values 
-3. Split the data into training and testing sets
+2. Split the data into training and testing sets
+3. Preprocess the data and remove missing values 
 4. Build a random forest classifier using the training set
 5. Evaluate our model on the test set
 
@@ -81,70 +81,69 @@ We can see our data has `r dim(gossis)[1]` entries and `r dim(gossis)[2]` Variab
 head(gossis[, 1:7]) %>% kable(caption = "GOSSIS (1st seven variables)")
 ```
 
-Next, we will select the variables we want to examine, some of which may end up in our final model. Here, we choose to include the following: `bmi`, `age`, `ethnicity`, `gender`, `icu_type`, and our outcome variable: `diabetes_mellitus`.
+### 1.3 Subset selection
+
+We will include four predictors in our model: `age`, `bmi`, `gender`, and `glucose apache`. Feel free to include more or choose entirely different predictors in your model!
 
 ```{r}
 #  Select subset of variables from original data
 reduced_data <- gossis %>% select(bmi,
                                   age,
                                   gender,
-                                  ethnicity,
-                                  icu_type,
                                   glucose_apache,
                                   diabetes_mellitus)
 head(reduced_data) %>% kable()
 ```
 
-## 2. Preprocessing the data
+We will also define our outcome variable and drop data with unknown outcomes
 
-We have to consider the NA values in our data. In a research project, it is critical to investigate the missing data by searching for patterns and replacing missing values (imputation) to see if this affects conclusions. For the simplicity of this demo, we will remove all rows containing missing values.
+```{r set_outcome, echo=TRUE}
+# Set the outcome variable here
+reduced_data$outcome_variable <- as.factor(reduced_data$diabetes_mellitus)
+reduced_data <- subset(reduced_data, select = -c(diabetes_mellitus))
 
-However, in your project, feel free to experiment with different imputation techniques!
-
-```{r data_types, echo=TRUE}
-# Check to see number of missing values in each column
-colSums(is.na(reduced_data))
-# Check number of rows before removing NA
+# Check number of rows
 nrow(reduced_data)
-# Remove rows with NA for age, bmi, ethnicity, gender, or diabetes_mellitus
-reduced_data <- drop_na(reduced_data)
-# Check number of rows after removing NA
+
+# For simplicity, we will drop all rows with missing outcomes
+reduced_data <- drop_na(reduced_data, any_of("outcome_variable"))
+
+# Check number of rows after removing rows with missing outcomes
 nrow(reduced_data)
-# We can see there are no NA values in our data
-colSums(is.na(reduced_data))
 ```
 
-Next we will encode our categorical variables. Encoding is the process of reshaping and binarizing categorical data to better suit machine learning models.
+## 2. Create the training and testing sets
+
+### 2.1 Encoding
+
+We'll encode our categorical variables. Encoding is the process of reshaping and binarizing categorical data to better suit machine learning models.
+
 
 ```{r}
-# Convert ethnicity and diabetes_mellitus to factor
-gossis$ethnicity <- as.factor(gossis$ethnicity)
-gossis$diabetes_mellitus <- as.factor(gossis$diabetes_mellitus)
 # Encode gender variable: male = 1, non-male = 0
-gossis$gender <- ifelse(gossis$gender == "M", 1, 0)
+reduced_data$gender <- ifelse(reduced_data$gender == "M", 1, 0)
 ```
 
+### 2.2 Split the data
 
-## 3. Create the training and testing sets
-
-We will only include four predictors in our model: `age`, `bmi`, `gender`, and `glucose apache`. Feel free to include more or choose entirely different predictors in your model!
+Let's create the training and test datasets.
 
 ```{r training_test, echo=TRUE}
 # Set the random number seed for reproducibility
 set.seed(1)
-# CHOOSE VARIABLE YOU WANT TO PREDICT HERE!
-reduced_data$outcome_variable <- as.factor(reduced_data$diabetes_mellitus)
+
 # Create data partition using the outcome variable
 train_index <- createDataPartition(reduced_data$outcome_variable,
                                    times = 1, p = 0.8, list = FALSE)
+
 # Split data into train and test sets, select columns that will be used in model
-train_set <- reduced_data[train_index, ] %>% select(- diabetes_mellitus)
+train_set <- reduced_data[train_index, ]
 head(train_set)
-test_set <- reduced_data[-train_index, ] %>% select(- diabetes_mellitus)
+test_set <- reduced_data[-train_index, ]
 head(test_set)
 ```
 
-## 4. Calculate summary statistics ("Table 1")
+## 3. View summary statistics ("Table 1")
 
 - Most studies include summary statistics as Table 1.
 - `library(tableone)` makes it easy to create these summary statistics
@@ -152,14 +151,34 @@ head(test_set)
 - [TableOne documentation](https://cran.r-project.org/web/packages/tableone/tableone.pdf)
 
 ```{r tableone, echo=TRUE}
-allvars <- c("bmi", "age", "gender", "ethnicity", "glucose_apache", "icu_type")
-catvars <- c("ethnicity", "gender", "icu_type")
+allvars <- c("bmi", "age", "gender", "ethnicity", "glucose_apache")
+catvars <- c("ethnicity", "gender")
 
 table_gossis <- CreateTableOne(vars = allvars, data = train_set,
                 factorVars = catvars,
                 strata = "outcome_variable")
 
 kableone(table_gossis, caption = "Demographics")
+```
+
+## 4. Preprocessing the data
+
+We have to consider the NA values in our data. For simplicity, we will replace missing values with the median of the train_set.
+
+Note that it is important that we do this _after_ splitting into training and test sets. If we imputed values using test data, we would risk leaking information about our test set into our training set ("data leakage").
+
+Feel free to experiment with different imputation techniques!
+
+```{r preprocessing, echo=TRUE}
+
+predictors <- c("age", "bmi", "gender", "glucose_apache")
+
+for (col in predictors) {
+    test_set[[col]][is.na(test_set[[col]])] <-
+        median(train_set[[col]], na.rm = TRUE)
+    train_set[[col]][is.na(train_set[[col]])] <-
+        median(train_set[[col]], na.rm = TRUE)
+}
 ```
 
 ## 5. Model building
@@ -172,7 +191,7 @@ kableone(table_gossis, caption = "Demographics")
 ```{r train_model, echo=TRUE}
 # Define forest tuning parameters
 # 5-fold cross validation
-control <- trainControl(method = "repeatedcv", number = 5)
+control <- trainControl(method = "repeatedcv", number = 2)
 # Number of variables tried at each split
 mtry <- sqrt(ncol(train_set))
 # Grid search is a linear search through a vector of mtry values
@@ -201,36 +220,38 @@ kable(importance$importance)
 
 We can see that `glucose_apache` and `bmi` had the most predictive power.
 
-### 5.3 Predict diabetes mellitus in five unseen patients from test set
+### 5.3 Predict diabetes mellitus in "unseen patients"
 
-#### Select unseen patients from testing set
+#### Select patients from the test set
 
-- Let's look at five unseen patients in our test set (i.e. patients not used in training).
+- Let's look some patients in our test set
 - What status do you expect for these patients?
 
 ```{r select_unseen, echo=TRUE}
-unseen <- head(test_set, 5) %>%
-          select(age, bmi, gender, glucose_apache)
-print(unseen)
+head(test_set, 5) %>% select(age, bmi, gender, glucose_apache)
 ```
 
-#### Predict the diabetes mellitus in unseen patients
+#### Predict diabetes mellitus in unseen patients
 
 - Is the model correct for this patient?
 - `type="prob"` to output probabilities
 - `type="raw"` to output classes
 
 ```{r predict_unseen, echo=TRUE}
-# Make predictions on testing set
+# Make predictions on test set
 forest_pred <- predict(forest,
-                     newdata = test_set,
-                     type = "raw")
+                       newdata = test_set,
+                       type = "raw")
 
 # Combine unseen patients data with corresponding predictions
-data.frame(age = unseen$age, bmi = unseen$bmi, gender = unseen$gender,
-           glucose_apache = unseen$glucose_apache,
-           prediction = forest_pred[1:5],
-           truth_value = test_set$outcome_variable[1:5]) %>% kable()
+data.frame(age = test_set$age,
+           bmi = test_set$bmi,
+           gender = test_set$gender,
+           glucose_apache = test_set$glucose_apache,
+           prediction = forest_pred,
+           truth_value = test_set$outcome_variable) %>%
+          head(30) %>%
+          kable()
 ```
 
 ## 6. Model evaluation
