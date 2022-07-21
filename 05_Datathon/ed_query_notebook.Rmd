@@ -59,15 +59,15 @@ tmp1 AS (
     SELECT subject_id, hadm_id, stay_id, intime, outtime,
     CASE WHEN hadm_id IS NULL THEN 0
     ELSE 1 END AS admitted
-    FROM `physionet-data.mimic_ed.edstays`
+    FROM `physionet-data.mimiciv_ed.edstays`
     ),
 tmp2 AS (
     SELECT t.hadm_id, t.intime, t.outtime, t.admitted, v.*, d.icd_code, d.icd_title,
         ROW_NUMBER() OVER (PARTITION BY v.subject_id ORDER BY v.subject_id, v.charttime) AS rownum
     FROM tmp1 t
-    LEFT JOIN `physionet-data.mimic_ed.vitalsign` v
+    LEFT JOIN `physionet-data.mimiciv_ed.vitalsign` v
     ON t.stay_id = v.stay_id
-    LEFT JOIN `physionet-data.mimic_ed.diagnosis` d
+    LEFT JOIN `physionet-data.mimiciv_ed.diagnosis` d
     ON t.stay_id = d.stay_id
     AND d.seq_num = 1
     )
